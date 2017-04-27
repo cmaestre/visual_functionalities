@@ -1,15 +1,35 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(visual_functionalities)
 
-
 find_package(catkin REQUIRED COMPONENTS
+  cv_bridge
+  moveit_ros_planning_interface
+  image_geometry
+  image_transport
   roscpp
-  rospy
+  sensor_msgs
   std_msgs
+  tf
   message_generation
 )
 
+find_package(OpenCV REQUIRED COMPONENTS features2d nonfree)
+
+# EIGEN
+#find_package(Eigen3 REQUIRED)
+find_package( PkgConfig )
+pkg_check_modules( EIGEN3 REQUIRED eigen3 )
 find_package(Boost REQUIRED COMPONENTS system )
+find_package(PCL 1.7 REQUIRED)
+
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
+
+find_path(RGBD_UTILS_INCLUDE_DIR rgbd_utils/rgbd_subscriber.hpp)
+find_library(RGBD_UTILS_LIBRARY NAMES rgbd_utils)
+
+find_path(IMAGE_PROCESSING_INCLUDE_DIR image_processing/MotionDetection.h)
+find_library(IMAGE_PROCESSING_LIBRARY NAMES image_processing)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -fPIC")
 
@@ -31,14 +51,17 @@ catkin_package(
 #  DEPENDS system_lib
 )
 
-include_directories(include ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
+include_directories(include /usr/local/include ${EIGEN3_INCLUDE_DIR} ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
 
-file ( GLOB_RECURSE all_sources src/lib/* )
+file ( GLOB_RECURSE all_sources src/lib/*.cpp )
 
 ## Service files
 
-add_executable(get_real_object_state_service src/services/get_real_object_state_service.cpp ${all_sources})
-target_link_libraries(get_real_object_state_service ${catkin_LIBRARIES})
+add_executable(get_real_object_state_service src/services/get_real_object_state_service.cpp ${all_sources} src/lib/visual_values.hpp)
+target_link_libraries(get_real_object_state_service /usr/local/lib/libaruco.so aruco ${OpenCV_LIBRARIES} ${PCL_LIBRARIES}
+${catkin_LIBRARIES} ${Boost_LIBRARIES}
+rgbd_utils image_processing )
+add_dependencies(get_real_object_state_service ${catkin_EXPORTED_TARGETS})
 
 ## Test files
 

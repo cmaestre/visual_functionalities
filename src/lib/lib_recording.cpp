@@ -1,44 +1,41 @@
-#include "../../include/record_baxter_eef_trajectory/lib_recording.hpp"
-
-#include <opencv2/highgui/highgui.hpp>
-#include <cmath>        // std::abs
+#include "../../include/visual_functionalities/lib_recording.hpp"
 
 //receive the image and prepare it for manipulation
-void config_pic(const sensor_msgs::ImageConstPtr& msg, Data_config& parameters){
-    parameters.set_rgb_msg(msg);
+void config_pic(const sensor_msgs::ImageConstPtr& msg, Visual_values& visual_values){
+    visual_values.set_rgb_msg(msg);
     cv_bridge::CvImagePtr cv_ptr;
     try
     {
         cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-        parameters.set_cv_pridged(cv_ptr);
+        visual_values.set_cv_pridged(cv_ptr);
     }
     catch (cv_bridge::Exception& e)
     {
         ROS_ERROR("cv_bridge exception: %s", e.what());
         return;
     }
-    parameters.set_cv_image(parameters.get_cv_pridge()->image);
+    visual_values.set_cv_image(visual_values.get_cv_pridge()->image);
 }
 
 //manipulate image to recognize the marker and draw a circle around the middle of the marker
-void config_and_detect_markers(Data_config& parameters){
-    parameters.get_aruco_detector().setDictionary("ARUCO");
-    parameters.get_aruco_detector().detect(parameters.get_cv_image(), parameters.get_markers(), parameters.get_camera_char(), parameters.get_marker_size());
-    if (!parameters.get_markers().empty()){
+void config_and_detect_markers(Visual_values& visual_values){
+    visual_values.get_aruco_detector().setDictionary("ARUCO");
+    visual_values.get_aruco_detector().detect(visual_values.get_cv_image(), visual_values.get_markers(), visual_values.get_camera_char(), visual_values.get_marker_size());
+    if (!visual_values.get_markers().empty()){
         int index;
         std::vector<aruco::Marker>::iterator marker_itr;
-        for(marker_itr = parameters.get_markers().begin(); marker_itr != parameters.get_markers().end(); marker_itr++){
+        for(marker_itr = visual_values.get_markers().begin(); marker_itr != visual_values.get_markers().end(); marker_itr++){
             if((*marker_itr).id == 3)
                 index = 0;
             else if((*marker_itr).id == 341)
                 index = 1;
-            (*marker_itr).draw(parameters.get_cv_image(), cv::Scalar(94.0, 206.0, 165.0, 0.0));
-            (*marker_itr).calculateExtrinsics(parameters.get_marker_size(), parameters.get_camera_char(), false);
+            (*marker_itr).draw(visual_values.get_cv_image(), cv::Scalar(94.0, 206.0, 165.0, 0.0));
+            (*marker_itr).calculateExtrinsics(visual_values.get_marker_size(), visual_values.get_camera_char(), false);
             Eigen::Vector2i marker_center;
             marker_center << (int) ((*marker_itr)[0].x + (*marker_itr)[2].x)/2,
                     (int) ((*marker_itr)[0].y + (*marker_itr)[2].y)/2;
-            parameters.set_marker_center(marker_center, index);
-            circle(parameters.get_cv_image(), cv::Point(((*marker_itr)[0].x + (*marker_itr)[2].x)/2,
+            visual_values.set_marker_center(marker_center, index);
+            circle(visual_values.get_cv_image(), cv::Point(((*marker_itr)[0].x + (*marker_itr)[2].x)/2,
                     ((*marker_itr)[0].y + (*marker_itr)[2].y)/2), 10, CV_RGB(255,0,0));
 
         }
@@ -46,46 +43,46 @@ void config_and_detect_markers(Data_config& parameters){
 }
 
 //show marker with circle around tracked point
-void show_marker(Data_config& parameters){
+void show_marker(Visual_values& visual_values){
     cv::namedWindow("ShowMarker",CV_WINDOW_AUTOSIZE);
-    cv::imshow("ShowMarker", parameters.get_cv_image());
+    cv::imshow("ShowMarker", visual_values.get_cv_image());
     cv::waitKey(1);
 }
 
 //locate object position
-void locate_object(const sensor_msgs::ImageConstPtr& depth_msg, Data_config& parameters){
-    if(!parameters.get_cv_image().empty() && !parameters.get_markers().empty()){
-        rgbd_utils::RGBD_to_Pointcloud converter(depth_msg, parameters.get_rgb_msg(), parameters.get_info_msg());
+void locate_object(const sensor_msgs::ImageConstPtr& depth_msg, Visual_values& visual_values){
+    if(!visual_values.get_cv_image().empty() && !visual_values.get_markers().empty()){
+        rgbd_utils::RGBD_to_Pointcloud converter(depth_msg, visual_values.get_rgb_msg(), visual_values.get_info_msg());
         sensor_msgs::PointCloud2 ptcl_msg = converter.get_pointcloud();
         image_processing::PointCloudT::Ptr input_cloud(new image_processing::PointCloudT);
         pcl::fromROSMsg(ptcl_msg, *input_cloud);
-        ROS_ERROR_STREAM("the markers vector size is: " << parameters.get_markers().size());
+        ROS_ERROR_STREAM("the markers vector size is: " << visual_values.get_markers().size());
         int i;
-        for(int j = 0; j < parameters.get_number_of_markers(); j++){
-            if(parameters.get_markers()[j].id == 3)
+        for(int j = 0; j < visual_values.get_number_of_markers(); j++){
+            if(visual_values.get_markers()[j].id == 3)
                 i = 0;
-            else if(parameters.get_markers()[j].id == 341)
+            else if(visual_values.get_markers()[j].id == 341)
                 i = 1;
-            image_processing::PointT pt = input_cloud->at((int) parameters.get_marker_center(i)(0) + (int) parameters.get_marker_center(i)(1)*input_cloud->width);
+            image_processing::PointT pt = input_cloud->at((int) visual_values.get_marker_center(i)(0) + (int) visual_values.get_marker_center(i)(1)*input_cloud->width);
             Eigen::Vector3d object_position(pt.x, pt.y, pt.z);
             if(object_position[0] == object_position[0] && object_position[1] == object_position[1] && object_position[2] == object_position[2])
-                parameters.set_object_position(object_position, i);
+                visual_values.set_object_position(object_position, i);
         }
-        for(size_t s = 0; s < parameters.get_object_position_vector().size(); s++)
-            ROS_ERROR_STREAM("locate_object " << s << " : " << parameters.get_object_position_vector()[s]);
+        for(size_t s = 0; s < visual_values.get_object_position_vector().size(); s++)
+            ROS_ERROR_STREAM("locate_object " << s << " : " << visual_values.get_object_position_vector()[s]);
         ROS_ERROR_STREAM(" ");
     }
 }
 
 //get baxter left eef pose
-void locate_left_eef_pose(baxter_core_msgs::EndpointState& l_eef_feedback, Data_config& parameters){
+void locate_left_eef_pose(baxter_core_msgs::EndpointState& l_eef_feedback, Visual_values& visual_values){
     Eigen::VectorXd left_end_effector_pose(6);
-    parameters.set_left_eef_pose_quat(l_eef_feedback.pose);
+    visual_values.set_left_eef_pose_quat(l_eef_feedback.pose);
 
-    tf::quaternionMsgToTF(parameters.get_left_eef_pose_quat().orientation, parameters.get_left_eef_rpy_orientation());
+    tf::quaternionMsgToTF(visual_values.get_left_eef_pose_quat().orientation, visual_values.get_left_eef_rpy_orientation());
 
     double roll, yaw, pitch;
-    tf::Matrix3x3 m(parameters.get_left_eef_rpy_orientation());
+    tf::Matrix3x3 m(visual_values.get_left_eef_rpy_orientation());
     m.getRPY(roll, pitch, yaw);
     left_end_effector_pose << l_eef_feedback.pose.position.x,
             l_eef_feedback.pose.position.y,
@@ -94,7 +91,7 @@ void locate_left_eef_pose(baxter_core_msgs::EndpointState& l_eef_feedback, Data_
             pitch,
             yaw;
 
-    parameters.set_left_eef_pose_rpy(left_end_effector_pose);
+    visual_values.set_left_eef_pose_rpy(left_end_effector_pose);
 
 }
 
@@ -151,12 +148,12 @@ void dispaly_image(std::string path, ros::Publisher& image_pub){
     image_pub.publish(msg);
 }
 
-void set_camera_poses_and_transformation(Data_config& parameters){
+void set_camera_poses_and_transformation(Visual_values& visual_values){
     tf::Quaternion my_angles;
     //from roslaunch file given pose construct a vector with x, y, z, roll, pitch and yaw
     std::vector<double> camera_pose;
-    ROS_ERROR_STREAM("angles are: " << parameters.get_camera_frame_pose() );
-    std::stringstream ss (parameters.get_camera_frame_pose());
+    ROS_ERROR_STREAM("angles are: " << visual_values.get_camera_frame_pose() );
+    std::stringstream ss (visual_values.get_camera_frame_pose());
     string field;
     while (getline( ss, field, ' ' ))
     {
@@ -170,10 +167,10 @@ void set_camera_poses_and_transformation(Data_config& parameters){
         camera_pose.push_back( f );
     }
 
-    if(strcmp(parameters.get_camera_frame_choice().c_str(), "rgb"))
-        parameters.set_camera_rgb_optical_pose(camera_pose);
-    else if(strcmp(parameters.get_camera_frame_choice().c_str(), "depth"))
-            parameters.set_camera_depth_optical_pose(camera_pose);
+    if(strcmp(visual_values.get_camera_frame_choice().c_str(), "rgb"))
+        visual_values.set_camera_rgb_optical_pose(camera_pose);
+    else if(strcmp(visual_values.get_camera_frame_choice().c_str(), "depth"))
+            visual_values.set_camera_depth_optical_pose(camera_pose);
     else
         ROS_WARN("please specify in the your launch file a parameter with the name (camera_frame) with a value equal to: 'rgb' or 'depth'");
 
@@ -184,17 +181,17 @@ void set_camera_poses_and_transformation(Data_config& parameters){
             rotation_matrix[1][0], rotation_matrix[1][1], rotation_matrix[1][2], camera_pose[1],
             rotation_matrix[2][0], rotation_matrix[2][1], rotation_matrix[2][2], camera_pose[2],
                                 0,                     0,                     0,              1;
-    parameters.set_transformation_matrix(trans_m);
-    ROS_INFO_STREAM("and the transformation matrix from params is: \n" << parameters.get_transformation_matrix());
+    visual_values.set_transformation_matrix(trans_m);
+    ROS_INFO_STREAM("and the transformation matrix from params is: \n" << visual_values.get_transformation_matrix());
 }
 
-void convert_whole_object_positions_vector(Data_config& parameters,
+void convert_whole_object_positions_vector(Visual_values& visual_values,
                                            std::vector<Eigen::Vector4d>& object_positions_vector,
                                            std::vector<std::vector<double>>& output_of_conversion){
-    set_camera_poses_and_transformation(parameters);
+    set_camera_poses_and_transformation(visual_values);
     std::vector<Eigen::Vector4d>::iterator itr;
     for(itr = object_positions_vector.begin(); itr != object_positions_vector.end(); itr++){
-        Eigen::Vector4d opv = parameters.get_transformation_matrix() * (*itr);
+        Eigen::Vector4d opv = visual_values.get_transformation_matrix() * (*itr);
         std::vector<double> inner_output;
         inner_output.push_back(opv(0));
         inner_output.push_back(opv(1));
@@ -203,7 +200,7 @@ void convert_whole_object_positions_vector(Data_config& parameters,
     }
 }
 
-void write_data(Data_config& parameters,
+void write_data(Visual_values& visual_values,
                 std::vector<std::vector<double>>& left_eef_trajectory,
                 std::vector<std::vector<double>>& object_positions_vector, std::ofstream& the_file){
     std::vector<std::vector<double>>::iterator outter_itr;
@@ -215,7 +212,7 @@ void write_data(Data_config& parameters,
         for(inner_itr = (*outter_itr).begin(); inner_itr != (*outter_itr).end(); inner_itr++) // eef pos and rotation
             the_file << (*inner_itr) << ",";
 
-        for(int i = 0; i < parameters.get_number_of_markers(); i++){ // obj position per object
+        for(int i = 0; i < visual_values.get_number_of_markers(); i++){ // obj position per object
             for(inner_itr = (*outter_itr_object).begin(); inner_itr != (*outter_itr_object).end(); inner_itr++)
                 the_file << (*inner_itr) << ",";
             the_file << 0 << "," << 0 << "," << 0 << ","; // obj rotation
@@ -227,49 +224,49 @@ void write_data(Data_config& parameters,
 }
 
 //record marker position (object position) if changed in the specified file
-void record_traj_and_object_position(Data_config& parameters,
+void record_traj_and_object_position(Visual_values& visual_values,
                                      std::vector<std::vector<double>>& left_eef_trajectory,
                                      ros::Publisher& image_pub,
                                      std::ofstream& the_file){
 
     Eigen::VectorXd old_values(6);
-    old_values = parameters.get_left_eef_pose_rpy();
+    old_values = visual_values.get_left_eef_pose_rpy();
     //ROS_ERROR_STREAM("here old values are: " << old_values);
-    parameters.set_pressed(false);
-    parameters.set_release(true);
-    parameters.set_toggle(false);
+    visual_values.set_pressed(false);
+    visual_values.set_release(true);
+    visual_values.set_toggle(false);
     std::string working_image_path = "/home/ghanim/git/catkin_ws/src/baxter_examples/share/images/working.jpg";
     std::string not_working_image_path = "/home/ghanim/git/catkin_ws/src/baxter_examples/share/images/finished.jpg";
-    ros::Rate rate(parameters.get_the_rate());
+    ros::Rate rate(visual_values.get_the_rate());
     rate.sleep();
     double time_now = 0.0;
     std::vector<Eigen::Vector4d> object_position_vector;
-    std::vector<Eigen::Vector3d> prev_object_position_vector(parameters.get_number_of_markers());
+    std::vector<Eigen::Vector3d> prev_object_position_vector(visual_values.get_number_of_markers());
     int nb_iter = 0;
     while(ros::ok()){
         int followed_object_index = 0;
         //ROS_INFO("go go go");
         //dispaly_image(not_working_image_path, image_pub);
-        if(parameters.get_pressed() && parameters.get_lower_botton_pressed()){
-            if(parameters.get_release()){
-                parameters.set_release(false);
-                parameters.set_toggle(true);
+        if(visual_values.get_pressed() && visual_values.get_lower_botton_pressed()){
+            if(visual_values.get_release()){
+                visual_values.set_release(false);
+                visual_values.set_toggle(true);
             }
 
             //wait till there is no (NaN values)
-            //            if (parameters.get_number_of_markers() == 1) {
-            while(parameters.get_object_position(followed_object_index)(0) != parameters.get_object_position(followed_object_index)(0) ||
-                  parameters.get_object_position(followed_object_index)(1) != parameters.get_object_position(followed_object_index)(1) ||
-                  parameters.get_object_position(followed_object_index)(2) != parameters.get_object_position(followed_object_index)(2))
+            //            if (visual_values.get_number_of_markers() == 1) {
+            while(visual_values.get_object_position(followed_object_index)(0) != visual_values.get_object_position(followed_object_index)(0) ||
+                  visual_values.get_object_position(followed_object_index)(1) != visual_values.get_object_position(followed_object_index)(1) ||
+                  visual_values.get_object_position(followed_object_index)(2) != visual_values.get_object_position(followed_object_index)(2))
                 ROS_ERROR("I am in waiting limbo for 1 object...........");
             //            }
-            //            else if (parameters.get_number_of_markers() == 2) {
-            //                while(parameters.get_object_position(0)(0) != parameters.get_object_position(0)(0) ||
-            //                      parameters.get_object_position(0)(1) != parameters.get_object_position(0)(1) ||
-            //                      parameters.get_object_position(0)(2) != parameters.get_object_position(0)(2) ||
-            //                      parameters.get_object_position(1)(0) != parameters.get_object_position(1)(0) ||
-            //                      parameters.get_object_position(1)(1) != parameters.get_object_position(1)(1) ||
-            //                      parameters.get_object_position(1)(2) != parameters.get_object_position(1)(2))
+            //            else if (visual_values.get_number_of_markers() == 2) {
+            //                while(visual_values.get_object_position(0)(0) != visual_values.get_object_position(0)(0) ||
+            //                      visual_values.get_object_position(0)(1) != visual_values.get_object_position(0)(1) ||
+            //                      visual_values.get_object_position(0)(2) != visual_values.get_object_position(0)(2) ||
+            //                      visual_values.get_object_position(1)(0) != visual_values.get_object_position(1)(0) ||
+            //                      visual_values.get_object_position(1)(1) != visual_values.get_object_position(1)(1) ||
+            //                      visual_values.get_object_position(1)(2) != visual_values.get_object_position(1)(2))
             //                    ROS_ERROR_STREAM("I am in waiting limbo for 2 objects...........");
             //            } else{
             //                ROS_ERROR("record_traj_and_object_position - wrong number of objects");
@@ -278,8 +275,8 @@ void record_traj_and_object_position(Data_config& parameters,
 
             //get current eef pose
             Eigen::VectorXd current_values(6);
-            current_values = parameters.get_left_eef_pose_rpy();
-            if ((current_values - old_values).norm() > parameters.get_epsilon()){
+            current_values = visual_values.get_left_eef_pose_rpy();
+            if ((current_values - old_values).norm() > visual_values.get_epsilon()){
                 time_now = ros::Time::now().toSec();
 
                 std::vector<double> inner_left_traj;
@@ -293,8 +290,8 @@ void record_traj_and_object_position(Data_config& parameters,
                 old_values = current_values;
 
                 //while saving end effector changes register object position concurrently
-                for(int i = 0; i < parameters.get_number_of_markers(); i++){
-                    Eigen::Vector3d current_obj_pos = parameters.get_object_position(i);
+                for(int i = 0; i < visual_values.get_number_of_markers(); i++){
+                    Eigen::Vector3d current_obj_pos = visual_values.get_object_position(i);
                     // If NaN get previous value
                     ROS_ERROR_STREAM("\n\n iteration" << nb_iter << " object ID " << i);
                     ROS_ERROR_STREAM(current_obj_pos[0] << " " << current_obj_pos[1] << " " << current_obj_pos[2]);
@@ -321,20 +318,20 @@ void record_traj_and_object_position(Data_config& parameters,
             nb_iter++;
         }
         else{
-            if(parameters.get_toggle()){
+            if(visual_values.get_toggle()){
                 ROS_ERROR("I need two buttons to be pressed simultaneously ...........");
-                parameters.set_release(true);
-                parameters.set_lower_button_pressed(false);
+                visual_values.set_release(true);
+                visual_values.set_lower_button_pressed(false);
 
             }
         }
-        if(parameters.get_toggle() && !parameters.get_lower_botton_pressed()){
+        if(visual_values.get_toggle() && !visual_values.get_lower_botton_pressed()){
             //left_eef_trajectory_file << "\n";
             //object_file << "\n";
-            parameters.set_toggle(false);
+            visual_values.set_toggle(false);
             std::vector<std::vector<double>> output_of_conversion;
-            convert_whole_object_positions_vector(parameters, object_position_vector, output_of_conversion);
-            write_data(parameters, left_eef_trajectory, output_of_conversion, the_file);
+            convert_whole_object_positions_vector(visual_values, object_position_vector, output_of_conversion);
+            write_data(visual_values, left_eef_trajectory, output_of_conversion, the_file);
             left_eef_trajectory.clear();
             object_position_vector.clear();
         }

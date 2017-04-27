@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<launch>
+
+  <param name="camera_param_path" value="$(find visual_functionalities)/misc/camera_param_baxter.xml"/>
+
+  <arg name="camera_link_pose" default="1.38 0.04 0.57 -0.305 0.019 0.952 -0.017"/>
+  <!-- launch openni to talk to kinect -->
+
+  <include file="$(find freenect_launch)/launch/freenect.launch">
+   <!-- These args are workarounds for tf_prefix issues in freenect.launch -->
+   <arg name="rgb_frame_id" value="camera_rgb_optical_frame"/>
+   <arg name="depth_frame_id" value="camera_depth_optical_frame"/>
+  </include>
+
+  <!-- Users update this to set transform between camera and robot -->
+  <node pkg="tf" type="static_transform_publisher" name="camera_link_broadcaster"
+        args="$(arg camera_link_pose) /base /camera_link 100" />
+
+  <!-- Real robot-->
+  <node name="get_real_model_state_service" pkg="visual_functionalities" type="get_real_model_state_service" output="screen" />
+
+</launch>

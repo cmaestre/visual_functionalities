@@ -17,6 +17,6 @@
         args="$(arg camera_link_pose) /base /camera_link 100" />
 
   <!-- Real robot-->
-  <node name="get_real_model_state_service" pkg="visual_functionalities" type="get_real_model_state_service" output="screen" />
+  <node name="get_real_object_state_node" pkg="visual_functionalities" type="get_real_object_state_service" output="screen" />
 
 </launch>

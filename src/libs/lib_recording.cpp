@@ -1,102 +1,7 @@
-#include "../../include/visual_functionalities/lib_recording.hpp"
-
-//receive the image and prepare it for manipulation
-void config_pic(const sensor_msgs::ImageConstPtr& msg, Visual_values& visual_values){
-    visual_values.set_rgb_msg(msg);
-    cv_bridge::CvImagePtr cv_ptr;
-    try
-    {
-        cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-        visual_values.set_cv_pridged(cv_ptr);
-    }
-    catch (cv_bridge::Exception& e)
-    {
-        ROS_ERROR("cv_bridge exception: %s", e.what());
-        return;
-    }
-    visual_values.set_cv_image(visual_values.get_cv_pridge()->image);
-}
-
-//manipulate image to recognize the marker and draw a circle around the middle of the marker
-void config_and_detect_markers(Visual_values& visual_values){
-    visual_values.get_aruco_detector().setDictionary("ARUCO");
-    visual_values.get_aruco_detector().detect(visual_values.get_cv_image(), visual_values.get_markers(), visual_values.get_camera_char(), visual_values.get_marker_size());
-    if (!visual_values.get_markers().empty()){
-        int index;
-        std::vector<aruco::Marker>::iterator marker_itr;
-        for(marker_itr = visual_values.get_markers().begin(); marker_itr != visual_values.get_markers().end(); marker_itr++){
-            if((*marker_itr).id == 3)
-                index = 0;
-            else if((*marker_itr).id == 341)
-                index = 1;
-            (*marker_itr).draw(visual_values.get_cv_image(), cv::Scalar(94.0, 206.0, 165.0, 0.0));
-            (*marker_itr).calculateExtrinsics(visual_values.get_marker_size(), visual_values.get_camera_char(), false);
-            Eigen::Vector2i marker_center;
-            marker_center << (int) ((*marker_itr)[0].x + (*marker_itr)[2].x)/2,
-                    (int) ((*marker_itr)[0].y + (*marker_itr)[2].y)/2;
-            visual_values.set_marker_center(marker_center, index);
-            circle(visual_values.get_cv_image(), cv::Point(((*marker_itr)[0].x + (*marker_itr)[2].x)/2,
-                    ((*marker_itr)[0].y + (*marker_itr)[2].y)/2), 10, CV_RGB(255,0,0));
-
-        }
-    }
-}
-
-//show marker with circle around tracked point
-void show_marker(Visual_values& visual_values){
-    cv::namedWindow("ShowMarker",CV_WINDOW_AUTOSIZE);
-    cv::imshow("ShowMarker", visual_values.get_cv_image());
-    cv::waitKey(1);
-}
-
-//locate object position
-void locate_object(const sensor_msgs::ImageConstPtr& depth_msg, Visual_values& visual_values){
-    if(!visual_values.get_cv_image().empty() && !visual_values.get_markers().empty()){
-        rgbd_utils::RGBD_to_Pointcloud converter(depth_msg, visual_values.get_rgb_msg(), visual_values.get_info_msg());
-        sensor_msgs::PointCloud2 ptcl_msg = converter.get_pointcloud();
-        image_processing::PointCloudT::Ptr input_cloud(new image_processing::PointCloudT);
-        pcl::fromROSMsg(ptcl_msg, *input_cloud);
-        ROS_ERROR_STREAM("the markers vector size is: " << visual_values.get_markers().size());
-        int i;
-        for(int j = 0; j < visual_values.get_number_of_markers(); j++){
-            if(visual_values.get_markers()[j].id == 3)
-                i = 0;
-            else if(visual_values.get_markers()[j].id == 341)
-                i = 1;
-            image_processing::PointT pt = input_cloud->at((int) visual_values.get_marker_center(i)(0) + (int) visual_values.get_marker_center(i)(1)*input_cloud->width);
-            Eigen::Vector3d object_position(pt.x, pt.y, pt.z);
-            if(object_position[0] == object_position[0] && object_position[1] == object_position[1] && object_position[2] == object_position[2])
-                visual_values.set_object_position(object_position, i);
-        }
-        for(size_t s = 0; s < visual_values.get_object_position_vector().size(); s++)
-            ROS_ERROR_STREAM("locate_object " << s << " : " << visual_values.get_object_position_vector()[s]);
-        ROS_ERROR_STREAM(" ");
-    }
-}
-
-//get baxter left eef pose
-void locate_left_eef_pose(baxter_core_msgs::EndpointState& l_eef_feedback, Visual_values& visual_values){
-    Eigen::VectorXd left_end_effector_pose(6);
-    visual_values.set_left_eef_pose_quat(l_eef_feedback.pose);
-
-    tf::quaternionMsgToTF(visual_values.get_left_eef_pose_quat().orientation, visual_values.get_left_eef_rpy_orientation());
-
-    double roll, yaw, pitch;
-    tf::Matrix3x3 m(visual_values.get_left_eef_rpy_orientation());
-    m.getRPY(roll, pitch, yaw);
-    left_end_effector_pose << l_eef_feedback.pose.position.x,
-            l_eef_feedback.pose.position.y,
-            l_eef_feedback.pose.position.z,
-            roll,
-            pitch,
-            yaw;
-
-    visual_values.set_left_eef_pose_rpy(left_end_effector_pose);
-
-}
+#include <visual_functionalities/lib_recording.hpp>
 
 //Convert object position from camera frame to robot frame
-void convert_object_position_to_robot_base(Eigen::Vector3d& object_pose_in_camera_frame, Eigen::Vector3d& object_pose_in_robot_frame){
+void lib_recording_functions::convert_object_position_to_robot_base(Eigen::Vector3d& object_pose_in_camera_frame, Eigen::Vector3d& object_pose_in_robot_frame){
     tf::TransformListener listener;
     tf::StampedTransform stamped_transform;
     //std::string child_frame = "/camera_depth_optical_frame";
@@ -142,13 +47,13 @@ void convert_object_position_to_robot_base(Eigen::Vector3d& object_pose_in_camer
 }
 
 //Display some images on baxter screen to reflect what he is doing
-void dispaly_image(std::string path, ros::Publisher& image_pub){
+void lib_recording_functions::dispaly_image(std::string path, ros::Publisher& image_pub){
     cv::Mat img = cv::imread(path);
     sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", img).toImageMsg();
     image_pub.publish(msg);
 }
 
-void set_camera_poses_and_transformation(Visual_values& visual_values){
+void lib_recording_functions::set_camera_poses_and_transformation(Visual_values& visual_values){
     tf::Quaternion my_angles;
     //from roslaunch file given pose construct a vector with x, y, z, roll, pitch and yaw
     std::vector<double> camera_pose;
@@ -185,7 +90,7 @@ void set_camera_poses_and_transformation(Visual_values& visual_values){
     ROS_INFO_STREAM("and the transformation matrix from params is: \n" << visual_values.get_transformation_matrix());
 }
 
-void convert_whole_object_positions_vector(Visual_values& visual_values,
+void lib_recording_functions::convert_whole_object_positions_vector(Visual_values& visual_values,
                                            std::vector<Eigen::Vector4d>& object_positions_vector,
                                            std::vector<std::vector<double>>& output_of_conversion){
     set_camera_poses_and_transformation(visual_values);
@@ -200,7 +105,7 @@ void convert_whole_object_positions_vector(Visual_values& visual_values,
     }
 }
 
-void write_data(Visual_values& visual_values,
+void lib_recording_functions::write_data(Visual_values& visual_values,
                 std::vector<std::vector<double>>& left_eef_trajectory,
                 std::vector<std::vector<double>>& object_positions_vector, std::ofstream& the_file){
     std::vector<std::vector<double>>::iterator outter_itr;
@@ -224,13 +129,13 @@ void write_data(Visual_values& visual_values,
 }
 
 //record marker position (object position) if changed in the specified file
-void record_traj_and_object_position(Visual_values& visual_values,
+void lib_recording_functions::record_traj_and_object_position(Visual_values& visual_values,
                                      std::vector<std::vector<double>>& left_eef_trajectory,
                                      ros::Publisher& image_pub,
                                      std::ofstream& the_file){
 
     Eigen::VectorXd old_values(6);
-    old_values = visual_values.get_left_eef_pose_rpy();
+    //old_values = visual_values.get_left_eef_pose_rpy();
     //ROS_ERROR_STREAM("here old values are: " << old_values);
     visual_values.set_pressed(false);
     visual_values.set_release(true);
@@ -255,10 +160,10 @@ void record_traj_and_object_position(Visual_values& visual_values,
 
             //wait till there is no (NaN values)
             //            if (visual_values.get_number_of_markers() == 1) {
-            while(visual_values.get_object_position(followed_object_index)(0) != visual_values.get_object_position(followed_object_index)(0) ||
-                  visual_values.get_object_position(followed_object_index)(1) != visual_values.get_object_position(followed_object_index)(1) ||
-                  visual_values.get_object_position(followed_object_index)(2) != visual_values.get_object_position(followed_object_index)(2))
-                ROS_ERROR("I am in waiting limbo for 1 object...........");
+//            while(visual_values.get_object_position(followed_object_index)(0) != visual_values.get_object_position(followed_object_index)(0) ||
+//                  visual_values.get_object_position(followed_object_index)(1) != visual_values.get_object_position(followed_object_index)(1) ||
+//                  visual_values.get_object_position(followed_object_index)(2) != visual_values.get_object_position(followed_object_index)(2))
+//                ROS_ERROR("I am in waiting limbo for 1 object...........");
             //            }
             //            else if (visual_values.get_number_of_markers() == 2) {
             //                while(visual_values.get_object_position(0)(0) != visual_values.get_object_position(0)(0) ||
@@ -275,7 +180,7 @@ void record_traj_and_object_position(Visual_values& visual_values,
 
             //get current eef pose
             Eigen::VectorXd current_values(6);
-            current_values = visual_values.get_left_eef_pose_rpy();
+            //current_values = visual_values.get_left_eef_pose_rpy();
             if ((current_values - old_values).norm() > visual_values.get_epsilon()){
                 time_now = ros::Time::now().toSec();
 
@@ -291,7 +196,8 @@ void record_traj_and_object_position(Visual_values& visual_values,
 
                 //while saving end effector changes register object position concurrently
                 for(int i = 0; i < visual_values.get_number_of_markers(); i++){
-                    Eigen::Vector3d current_obj_pos = visual_values.get_object_position(i);
+                    Eigen::Vector3d current_obj_pos;
+                    current_obj_pos << visual_values.get_object_position().point.x, visual_values.get_object_position().point.y, visual_values.get_object_position().point.z;
                     // If NaN get previous value
                     ROS_ERROR_STREAM("\n\n iteration" << nb_iter << " object ID " << i);
                     ROS_ERROR_STREAM(current_obj_pos[0] << " " << current_obj_pos[1] << " " << current_obj_pos[2]);

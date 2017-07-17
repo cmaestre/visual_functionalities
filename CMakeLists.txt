@@ -7,9 +7,12 @@ find_package(catkin REQUIRED COMPONENTS
   image_geometry
   image_transport
   roscpp
+  pcl_conversions
   sensor_msgs
   std_msgs
   tf
+  baxter_core_msgs
+  crustcrawler_core_msgs
   message_generation
 )
 
@@ -45,23 +48,37 @@ generate_messages(
 
 catkin_package(
   INCLUDE_DIRS include
-  CATKIN_DEPENDS message_runtime
-#  LIBRARIES crustcrawler_cppkdl
-#  CATKIN_DEPENDS moveit_ros_planning_interface roscpp rospy std_msgs tf
+  LIBRARIES visual_functionalities
+  CATKIN_DEPENDS cv_bridge moveit_ros_planning_interface image_geometry image_transport roscpp sensor_msgs std_msgs tf baxter_core_msgs crustcrawler_core_msgs message_runtime
 #  DEPENDS system_lib
 )
+## Specify additional locations of header files
+## Your package locations should be listed before other locations
+include_directories(include /opt/ros/indigo/include/)
+include_directories(
+  ${catkin_INCLUDE_DIRS}
+)
 
-include_directories(include /usr/local/include ${EIGEN3_INCLUDE_DIR} ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
+## Declare a C++ library
+add_library(visual_functionalities
+        src/visual_functionalities.cpp
+        src/libs/lib_recording.cpp
+        )
+target_link_libraries(visual_functionalities /usr/local/lib/libaruco.so ${catkin_LIBRARIES})
 
-file ( GLOB_RECURSE all_sources src/lib/*.cpp )
+## Mark executables and/or libraries for installation
+install(TARGETS visual_functionalities
+        ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+        RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION})
 
-## Service files
 
-add_executable(get_real_object_state_service src/services/get_real_object_state_service.cpp ${all_sources} src/lib/visual_values.hpp)
-target_link_libraries(get_real_object_state_service /usr/local/lib/libaruco.so aruco ${OpenCV_LIBRARIES} ${PCL_LIBRARIES}
-${catkin_LIBRARIES} ${Boost_LIBRARIES}
-rgbd_utils image_processing )
-add_dependencies(get_real_object_state_service ${catkin_EXPORTED_TARGETS})
+## Mark cpp header files for installation
+install(DIRECTORY include/
+        DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
+
+
+
 
 ## Test files
 

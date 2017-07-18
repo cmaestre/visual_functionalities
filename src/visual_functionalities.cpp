@@ -91,14 +91,21 @@ void VISUAL_FUNCTIONALITIES::get_object_position(){
                 pcl::PointXYZRGBA pt_marker = input_cloud->at(std::round(x) + std::round(y) * input_cloud->width);
                 if(pt_marker.x == pt_marker.x && pt_marker.y == pt_marker.y && pt_marker.z == pt_marker.z){
                     ROS_WARN_STREAM("VISUAL_FUNCTIONALITIES: The marker 3D position is: " << pt_marker.x << ", " << pt_marker.y << ", " << pt_marker.z);
-                    _global_parameters.get_markers_positions_camera_frame() << pt_marker.x, pt_marker.y, pt_marker.z , 1.0;
+                    //_global_parameters.get_markers_positions_camera_frame() << pt_marker.x, pt_marker.y, pt_marker.z , 1.0;
+                    geometry_msgs::PointStamped object_position;
+                    object_position.header.stamp = ros::Time::now();
+                    object_position.point.x = pt_marker.x;
+                    object_position.point.y = pt_marker.y;
+                    object_position.point.z = pt_marker.z;
+                    _global_parameters.set_object_position(object_position);
 
                 }
             }
         }
-//        ROS_WARN_STREAM("VISUAL_FUNCTIONALITIES: the supposed number is: " << _global_parameters.get_number_of_validated_points()++);
+        ROS_WARN_STREAM("VISUAL_FUNCTIONALITIES: Trying to show the image");
         cv::imshow("ShowMarker", _global_parameters.get_raw_original_picture());
         cv::waitKey(1);
+        ROS_WARN_STREAM("VISUAL_FUNCTIONALITIES: Image shown");
     }
     catch(...)
     {

@@ -1,0 +1,7 @@
+<launch>  
+  <rosparam command="load" file="$(find visual_functionalities)/launch/params/global_params.yml" ns="visual_functionalities_parameters"/>
+  <param name="camera_file_path" value="$(find visual_functionalities)/misc/camera_param_baxter.xml" />
+
+  <node name="visual_functionalities_node" pkg="visual_functionalities" type="test_visual_functionalities" output="screen" args="launch-prefix= gdb -ex run --args"/>
+  <!-- node name="visual_functionalities_node" pkg="visual_functionalities" type="test_visual_functionalities" output="screen"/--> 
+</launch>

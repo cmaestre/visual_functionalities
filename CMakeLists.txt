@@ -64,7 +64,7 @@ add_library(visual_functionalities
         src/visual_functionalities.cpp
         src/libs/lib_recording.cpp
         )
-target_link_libraries(visual_functionalities /usr/local/lib/libaruco.so ${catkin_LIBRARIES})
+target_link_libraries(visual_functionalities /usr/local/lib/libaruco.so ${catkin_LIBRARIES} ${PCL_LIBRARIES} rgbd_utils)
 
 ## Mark executables and/or libraries for installation
 install(TARGETS visual_functionalities
@@ -81,5 +81,6 @@ install(DIRECTORY include/
 
 
 ## Test files
-
+add_executable(test_visual_functionalities src/test_visual_functionalities.cpp)
+target_link_libraries(test_visual_functionalities /usr/local/lib/libaruco.so  ${catkin_LIBRARIES} visual_functionalities)
 

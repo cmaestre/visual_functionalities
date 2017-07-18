@@ -1,7 +1,6 @@
 #ifndef _BAXTER_MOVER_HPP
 #define _BAXTER_MOVER_HPP
 
-#include "visual_values.hpp"
 #include "lib_recording.hpp"
 
 namespace visual_functionalities {
@@ -132,7 +131,10 @@ public:
 
     void init();
 
-    void get_object_position();
+    bool get_object_position_cb(visual_functionalities::object_detection_by_qr_code::Request &req,
+                                visual_functionalities::object_detection_by_qr_code::Response &res);
+
+    void show_image();
 
     Visual_values& get_global_parameters(){
         return _global_parameters;
@@ -140,6 +142,7 @@ public:
 private:
     ros::NodeHandle _nh_visual_functionalities;
     std::unique_ptr<ros::AsyncSpinner> _visual_functionalities_spinner;
+    std::unique_ptr<ros::ServiceServer> _visual_functionalities_service;
     ROBOT::Ptr _robot;
     CAMERA::Ptr _camera;
 };

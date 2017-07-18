@@ -1,4 +1,8 @@
-<launch>  
+<launch> 
+  <arg name="camera_link_pose" default="0.82 0.017 1.853 0.633 -0.495 -0.441 -0.401"/>
+  <node name="statict_transform" pkg="tf" type="static_transform_publisher" args=" $(arg camera_link_pose) /world /camera_link 100"/> 
+  
+
   <rosparam command="load" file="$(find visual_functionalities)/launch/params/global_params.yml" ns="visual_functionalities_parameters"/>
   <param name="camera_file_path" value="$(find visual_functionalities)/misc/camera_param_baxter.xml" />
 

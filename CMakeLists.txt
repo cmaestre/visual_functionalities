@@ -38,7 +38,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -fPIC")
 
 add_service_files(
   FILES
-  GetRealObjectState.srv
+  object_detection_by_qr_code.srv
 )
 
 generate_messages(

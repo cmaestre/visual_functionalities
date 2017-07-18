@@ -4,8 +4,11 @@ using namespace visual_functionalities;
 
 void VISUAL_FUNCTIONALITIES::init(){
     ROS_INFO("VISUAL_FUNCTIONALITIES: initializing ......");
+    _visual_functionalities_service.reset(new ros::ServiceServer(_nh_visual_functionalities.advertiseService("object_detection_by_qr_code", &VISUAL_FUNCTIONALITIES::get_object_position_cb, this)));
     _nh_visual_functionalities.getParam("/visual_functionalities_parameters", _global_parameters.get_parameters());
     _global_parameters.set_marker_size(std::stof(_global_parameters.get_parameters()["marker_size"]));
+    _global_parameters.set_child_frame(std::string(_global_parameters.get_parameters()["child_frame"]));
+    _global_parameters.set_parent_frame(std::string(_global_parameters.get_parameters()["parent_frame"]));
 
     //set the robot
     std::string robot_name = std::string(_global_parameters.get_parameters()["robot"]);
@@ -39,20 +42,14 @@ void VISUAL_FUNCTIONALITIES::init(){
     ROS_INFO("VISUAL_FUNCTIONALITIES: initialized");
 }
 
-void VISUAL_FUNCTIONALITIES::get_object_position(){
-    ROS_INFO("VISUAL_FUNCTIONALITIES: at get object position");
-    //while(!_global_parameters.get_camera_topics_status());
+void VISUAL_FUNCTIONALITIES::show_image(){
     _global_parameters.get_rgb_msg().reset(new sensor_msgs::Image(_camera->_syncronized_camera_sub->get_rgb()));
     _global_parameters.get_depth_msg().reset(new sensor_msgs::Image(_camera->_syncronized_camera_sub->get_depth()));
     _global_parameters.get_camera_info_msg().reset(new sensor_msgs::CameraInfo(_camera->_syncronized_camera_sub->get_rgb_info()));
-
-    cv::namedWindow("ShowMarker",CV_WINDOW_AUTOSIZE);
-
-    cv_bridge::CvImagePtr cv_ptr = _global_parameters.get_cvt();
-    try
-    {
-        cv_ptr = cv_bridge::toCvCopy(_global_parameters.get_rgb_msg(), sensor_msgs::image_encodings::BGR8);
-        _global_parameters.set_raw_original_picture(cv_ptr->image);
+    try{
+        cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(_global_parameters.get_rgb_msg(), sensor_msgs::image_encodings::BGR8);
+        _global_parameters.set_cvt(cv_ptr);
+        _global_parameters.set_raw_original_picture(_global_parameters.get_cvt()->image);
         _global_parameters.get_aruco_marker_detector().setDictionary("ARUCO");
         _global_parameters.get_aruco_marker_detector().detect(_global_parameters.get_raw_original_picture(),
                                                               _global_parameters.get_markers(),
@@ -60,10 +57,12 @@ void VISUAL_FUNCTIONALITIES::get_object_position(){
                                                               0.1);
         _global_parameters.get_marker_centers().resize(_global_parameters.get_markers().size());
 
-        ROS_WARN_STREAM("VISUAL_FUNCTIONALITIES: I found markers, number of them is: " << _global_parameters.get_markers().size());
+//        ROS_WARN_STREAM("VISUAL_FUNCTIONALITIES: I found markers, number of them is: " << _global_parameters.get_markers().size());
+//        if(!_global_parameters.get_markers().empty())
+//            ROS_WARN_STREAM("VISUAL_FUNCTIONALITIES: And their IDs are: ");
 
         for(size_t i = 0; i < _global_parameters.get_markers().size(); i++){
-
+//            ROS_WARN_STREAM("VISUAL_FUNCTIONALITIES: For marker number: " << i << " The ID is: " << _global_parameters.get_markers()[i].id);
             _global_parameters.get_markers()[i].draw(_global_parameters.get_raw_original_picture(), cv::Scalar(94.0, 206.0, 165.0, 0.0));
 
             _global_parameters.get_markers()[i].calculateExtrinsics(_global_parameters.get_marker_size(),
@@ -86,32 +85,51 @@ void VISUAL_FUNCTIONALITIES::get_object_position(){
             pcl::PointCloud<pcl::PointXYZRGBA>::Ptr
                     input_cloud(new pcl::PointCloud<pcl::PointXYZRGBA>);
             pcl::fromROSMsg(_global_parameters.get_pointcloud_msg(), *input_cloud);
-            for(size_t q = 0; q < _global_parameters.get_marker_centers().size(); q++){
-                double x = _global_parameters.get_marker_centers()[q](0), y = _global_parameters.get_marker_centers()[q](1);
-                pcl::PointXYZRGBA pt_marker = input_cloud->at(std::round(x) + std::round(y) * input_cloud->width);
-                if(pt_marker.x == pt_marker.x && pt_marker.y == pt_marker.y && pt_marker.z == pt_marker.z){
-                    ROS_WARN_STREAM("VISUAL_FUNCTIONALITIES: The marker 3D position is: " << pt_marker.x << ", " << pt_marker.y << ", " << pt_marker.z);
-                    //_global_parameters.get_markers_positions_camera_frame() << pt_marker.x, pt_marker.y, pt_marker.z , 1.0;
-                    geometry_msgs::PointStamped object_position;
-                    object_position.header.stamp = ros::Time::now();
-                    object_position.point.x = pt_marker.x;
-                    object_position.point.y = pt_marker.y;
-                    object_position.point.z = pt_marker.z;
-                    _global_parameters.set_object_position(object_position);
-
-                }
+            double x = _global_parameters.get_marker_centers()[i](0), y = _global_parameters.get_marker_centers()[i](1);
+            pcl::PointXYZRGBA pt_marker = input_cloud->at(std::round(x) + std::round(y) * input_cloud->width);
+            if(pt_marker.x == pt_marker.x && pt_marker.y == pt_marker.y && pt_marker.z == pt_marker.z){
+//                ROS_WARN_STREAM("VISUAL_FUNCTIONALITIES: The marker 3D position is: " << pt_marker.x << ", " << pt_marker.y << ", " << pt_marker.z);
+                //_global_parameters.get_markers_positions_camera_frame() << pt_marker.x, pt_marker.y, pt_marker.z , 1.0;
+                Eigen::Vector3d object_position_camera_frame, object_position_robot_frame;
+                object_position_camera_frame << pt_marker.x, pt_marker.y, pt_marker.z;
+                lib_recording_functions::convert_object_position_to_robot_base(_global_parameters,
+                                                                               object_position_camera_frame,
+                                                                               object_position_robot_frame);
+                geometry_msgs::PointStamped object_position;
+                object_position.header.stamp = ros::Time::now();
+                object_position.point.x = object_position_robot_frame(0);
+                object_position.point.y = object_position_robot_frame(1);
+                object_position.point.z = object_position_robot_frame(2);
+                _global_parameters.set_object_position(_global_parameters.get_markers()[i].id, object_position);
             }
+            else{
+                ROS_WARN_STREAM("VISUAL_FUNCTIONALITIES: The marker position is nan: " << pt_marker.x << ", " << pt_marker.y << ", " << pt_marker.z);
+            }
+
         }
-        ROS_WARN_STREAM("VISUAL_FUNCTIONALITIES: Trying to show the image");
-        cv::imshow("ShowMarker", _global_parameters.get_raw_original_picture());
-        cv::waitKey(1);
-        ROS_WARN_STREAM("VISUAL_FUNCTIONALITIES: Image shown");
     }
-    catch(...)
-    {
+    catch(...){
         ROS_ERROR("Something went wrong !!!");
         return;
     }
+
+    cv::namedWindow("ShowMarker",CV_WINDOW_AUTOSIZE);
+    if(!_global_parameters.get_raw_original_picture().empty()){
+        cv::imshow("ShowMarker", _global_parameters.get_raw_original_picture());
+        cv::waitKey(1);
+    }
+}
+
+bool VISUAL_FUNCTIONALITIES::get_object_position_cb(visual_functionalities::object_detection_by_qr_code::Request &req,
+                                                    visual_functionalities::object_detection_by_qr_code::Response &res){
+    ROS_INFO("VISUAL_FUNCTIONALITIES: at get object position");
+    for(auto& i: _global_parameters.get_objects_positions_map()){
+        if(req.object_index == i.first){
+            res.model_state = {i.second.point.x, i.second.point.y, i.second.point.z};
+            return true;
+        }
+    }
+    return false;
 }
 
 

@@ -43,10 +43,12 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include <visual_functionalities/object_detection_by_qr_code.h>
+
 struct Camera_values {
     XmlRpc::XmlRpcValue parameters;
     size_t number_of_markers = 2;
-    geometry_msgs::PointStamped object_position;
+    std::map<int, geometry_msgs::PointStamped> objects_positions;
     int number_of_points = 10, number_of_valid_point = 0;
 
     cv_bridge::CvImagePtr cv_ptr;
@@ -68,7 +70,7 @@ struct Camera_values {
     Eigen::Vector3d transformation_RPY;
     tf::Quaternion transformation_quaternion;
     std::string camera_fram_pose;
-    std::string camera_frame_choice;
+    std::string camera_frame_choice, child_frame, parent_frame;
 
     std::vector<double> camera_rgb_optical_pose, camera_depth_optical_pose, camera_link_pose;
     Eigen::Matrix4d Trans_M;
@@ -96,8 +98,12 @@ public:
         return params.parameters;
     }
 
-    geometry_msgs::PointStamped& get_object_position(){
-        return params.object_position;
+    std::map<int, geometry_msgs::PointStamped>& get_objects_positions_map(){
+        return params.objects_positions;
+    }
+
+    geometry_msgs::PointStamped& get_object_position(int id){
+        return params.objects_positions.find(id)->second;
     }
 
     cv_bridge::CvImagePtr& get_cvt(){
@@ -230,14 +236,26 @@ public:
         return params.camera_frame_choice;
     }
 
+    std::string& get_child_frame(){
+        return params.child_frame;
+    }
+
+    std::string& get_parent_frame(){
+        return params.parent_frame;
+    }
+
     ///setters
     ///
     void set_parameters(XmlRpc::XmlRpcValue parameters){
         params.parameters = parameters;
     }
 
-    void set_object_position(geometry_msgs::PointStamped& object_position){
-            params.object_position = object_position;
+    void set_cvt(cv_bridge::CvImagePtr& cvimage){
+        params.cv_ptr = cvimage;
+    }
+
+    void set_object_position(int id, geometry_msgs::PointStamped& object_position){
+            params.objects_positions.insert ( std::pair<int, geometry_msgs::PointStamped>(id, object_position) );
     }
 
     void set_raw_original_picture(cv::Mat& picture){
@@ -352,6 +370,14 @@ public:
 
     void set_number_of_validated_point(int i){
         params.number_of_valid_point = i;
+    }
+
+    void set_child_frame(std::string frame){
+        params.child_frame = frame;
+    }
+
+    void set_parent_frame(std::string frame){
+        params.parent_frame = frame;
     }
 };
 

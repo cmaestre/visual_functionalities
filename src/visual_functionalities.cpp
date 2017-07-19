@@ -107,7 +107,7 @@ void VISUAL_FUNCTIONALITIES::show_image(){
         }
     }
     catch(...){
-        ROS_ERROR("Something went wrong !!!");
+//        ROS_ERROR("Something went wrong !!!");
         return;
     }
 
@@ -157,11 +157,14 @@ void CAMERA_kinect_v2::init(){
 
 void CAMERA_kinect_freenect::init(){
     _syncronized_camera_sub.reset(new rgbd_utils::RGBD_Subscriber("/camera/rgb/camera_info",
-                                                                  "/camera/rgb/image_raw",
-                                                                  "/camera/depth/camera_info",
-                                                                  "/camera/depth/image_raw",
+                                                                  "/camera/rgb/image_color",
+                                                                  "/camera/depth_registered/sw_registered/camera_info",
+                                                                  "/camera/depth_registered/sw_registered/image_rect",
                                                                   _nh_camera));
-    _camera_topics_sub = _nh_camera.subscribe<sensor_msgs::Image>("/camera/depth/image_raw", 1, &CAMERA_kinect_freenect::camera_topics_start_publishing_cb, this);
+//    _camera_topics_rgb_info_sub = _nh_camera.subscribe<sensor_msgs::CameraInfo>("/camera/rgb/camera_info", 1, &CAMERA_kinect_freenect::camera_topics_rgb_info_cb, this);
+//    _camera_topics_rgb_image_sub = _nh_camera.subscribe<sensor_msgs::Image>("/camera/rgb/image_color", 1, &CAMERA_kinect_freenect::camera_topics_rgb_image_cb, this);
+//    _camera_topics_depth_info_sub = _nh_camera.subscribe<sensor_msgs::CameraInfo>("/camera/depth_registered/sw_registered/camera_info", 1, &CAMERA_kinect_freenect::camera_topics_depth_info_cb, this);
+    _camera_topics_sub = _nh_camera.subscribe<sensor_msgs::Image>("/camera/depth_registered/sw_registered/image_rect", 1, &CAMERA_kinect_freenect::camera_topics_start_publishing_cb, this);
     std::string camera_file_path;
     _nh_camera.getParam("/camera_file_path", camera_file_path);
     _global_parameters.get_camera_character().readFromXMLFile(camera_file_path);

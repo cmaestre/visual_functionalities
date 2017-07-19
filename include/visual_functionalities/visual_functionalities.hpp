@@ -20,7 +20,7 @@ public:
 protected:
     ros::NodeHandle _nh_camera;
     std::unique_ptr<ros::AsyncSpinner> _camera_spinner;
-    ros::Subscriber _camera_topics_sub;
+    ros::Subscriber _camera_topics_sub, _camera_topics_rgb_image_sub, _camera_topics_rgb_info_sub, _camera_topics_depth_info_sub;
     std::shared_ptr<rgbd_utils::RGBD_Subscriber> _syncronized_camera_sub;
 };
 
@@ -34,7 +34,20 @@ public:
 
     void init() override;
     void camera_topics_start_publishing_cb(const sensor_msgs::Image::ConstPtr& depth_msgs){
+//        ROS_INFO("VISUAL_FUNCTIONALITIES: I am receiving the depth topic");
         _global_parameters.set_camera_topics_status(true);
+    }
+
+    void camera_topics_rgb_image_cb(const sensor_msgs::Image::ConstPtr& rgb_msgs){
+        ROS_INFO("VISUAL_FUNCTIONALITIES: I am receiving the rgb image topic");
+    }
+
+    void camera_topics_rgb_info_cb(const sensor_msgs::CameraInfo::ConstPtr& rgb_msgs){
+        ROS_INFO("VISUAL_FUNCTIONALITIES: I am receiving the rgb info topic");
+    }
+
+    void camera_topics_depth_info_cb(const sensor_msgs::CameraInfo::ConstPtr& rgb_msgs){
+        ROS_INFO("VISUAL_FUNCTIONALITIES: I am receiving the depth info topic");
     }
 };
 

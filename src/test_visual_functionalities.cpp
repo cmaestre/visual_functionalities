@@ -8,7 +8,7 @@ int main(int argc, char** argv){
     visual_functionalities::VISUAL_FUNCTIONALITIES::Ptr visual_class;
     visual_class.reset(new visual_functionalities::VISUAL_FUNCTIONALITIES);
 
-    ros::Rate rate(10);
+    ros::Rate rate(50);
 
     while(ros::ok()){
         visual_class->show_image();

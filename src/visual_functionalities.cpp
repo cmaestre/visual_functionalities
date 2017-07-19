@@ -4,24 +4,19 @@ using namespace visual_functionalities;
 
 void VISUAL_FUNCTIONALITIES::init(){
     ROS_INFO("VISUAL_FUNCTIONALITIES: initializing ......");
-    _visual_functionalities_service.reset(new ros::ServiceServer(_nh_visual_functionalities.advertiseService("object_detection_by_qr_code", &VISUAL_FUNCTIONALITIES::get_object_position_cb, this)));
+    _visual_functionalities_service.reset(new ros::ServiceServer(
+                                              _nh_visual_functionalities.advertiseService("object_detection_by_qr_code",
+                                                                                          &VISUAL_FUNCTIONALITIES::get_object_position_cb,
+                                                                                          this)));
+    _object_qr_position_pub.reset(new ros::Publisher(
+                                      _nh_visual_functionalities.advertise<visual_functionalities::object_qr_position>("object_qr_position", true)));
     _nh_visual_functionalities.getParam("/visual_functionalities_parameters", _global_parameters.get_parameters());
     _global_parameters.set_marker_size(std::stof(_global_parameters.get_parameters()["marker_size"]));
     _global_parameters.set_child_frame(std::string(_global_parameters.get_parameters()["child_frame"]));
     _global_parameters.set_parent_frame(std::string(_global_parameters.get_parameters()["parent_frame"]));
 
     //set the robot
-    std::string robot_name = std::string(_global_parameters.get_parameters()["robot"]);
     std::string camera_name = std::string(_global_parameters.get_parameters()["camera"]);
-    if(strcmp(robot_name.c_str(), "baxter") == 0){
-        _robot.reset(new BAXTER);
-        _robot->init();
-    }
-    else if(strcmp(robot_name.c_str(), "crustcrawler") == 0){
-        _robot.reset(new CRUSTCRAWLER);
-        _robot->init();
-    }
-
     //set the camera
     if(strcmp(camera_name.c_str(), "kinect_v2") == 0){
         _camera.reset(new CAMERA_kinect_v2);
@@ -90,22 +85,25 @@ void VISUAL_FUNCTIONALITIES::show_image(){
             if(pt_marker.x == pt_marker.x && pt_marker.y == pt_marker.y && pt_marker.z == pt_marker.z){
 //                ROS_WARN_STREAM("VISUAL_FUNCTIONALITIES: The marker 3D position is: " << pt_marker.x << ", " << pt_marker.y << ", " << pt_marker.z);
                 //_global_parameters.get_markers_positions_camera_frame() << pt_marker.x, pt_marker.y, pt_marker.z , 1.0;
-                Eigen::Vector3d object_position_camera_frame, object_position_robot_frame;
-                object_position_camera_frame << pt_marker.x, pt_marker.y, pt_marker.z;
-                lib_recording_functions::convert_object_position_to_robot_base(_global_parameters,
-                                                                               object_position_camera_frame,
-                                                                               object_position_robot_frame);
+//                Eigen::Vector3d object_position_camera_frame, object_position_robot_frame;
+//                object_position_camera_frame << pt_marker.x, pt_marker.y, pt_marker.z;
+//                lib_recording_functions::convert_object_position_to_robot_base(_global_parameters,
+//                                                                               object_position_camera_frame,
+//                                                                               object_position_robot_frame);
                 geometry_msgs::PointStamped object_position;
                 object_position.header.stamp = ros::Time::now();
-                object_position.point.x = object_position_robot_frame(0);
-                object_position.point.y = object_position_robot_frame(1);
-                object_position.point.z = object_position_robot_frame(2);
+                object_position.point.x = pt_marker.x;
+                object_position.point.y = pt_marker.y;
+                object_position.point.z = pt_marker.z;
                 _global_parameters.set_object_position(_global_parameters.get_markers()[i].id, object_position);
+                visual_functionalities::object_qr_position object_qr_position_topic;
+                object_qr_position_topic.qr_id.data = _global_parameters.get_markers()[i].id;
+                object_qr_position_topic.object_qr_position = object_position;
+                _object_qr_position_pub->publish(object_qr_position_topic);
             }
-            else{
-                ROS_WARN_STREAM("VISUAL_FUNCTIONALITIES: The marker position is nan: " << pt_marker.x << ", " << pt_marker.y << ", " << pt_marker.z);
-            }
-
+//            else{
+//                ROS_WARN_STREAM("VISUAL_FUNCTIONALITIES: The marker position is nan: " << pt_marker.x << ", " << pt_marker.y << ", " << pt_marker.z);
+//            }
         }
     }
     catch(...){
@@ -120,6 +118,7 @@ void VISUAL_FUNCTIONALITIES::show_image(){
     }
 }
 
+
 bool VISUAL_FUNCTIONALITIES::get_object_position_cb(visual_functionalities::object_detection_by_qr_code::Request &req,
                                                     visual_functionalities::object_detection_by_qr_code::Response &res){
     ROS_INFO("VISUAL_FUNCTIONALITIES: at get object position");
@@ -132,6 +131,13 @@ bool VISUAL_FUNCTIONALITIES::get_object_position_cb(visual_functionalities::obje
     return false;
 }
 
+void VISUAL_FUNCTIONALITIES::convert_vector_object_position_robot_frame(
+        std::vector<std::vector<double> > &object_position_camera_frame_vector,
+        std::vector<std::vector<double> > &object_position_robot_frame_vector){
+    lib_recording_functions::convert_whole_object_positions_vector(_global_parameters,
+                                                                   object_position_camera_frame_vector,
+                                                                   object_position_robot_frame_vector);
+}
 
 void CAMERA_kinect_v2::init(){
     ROS_INFO_STREAM("CAMERA_kinect_freenect: initializing, name space is: ");
@@ -176,20 +182,4 @@ void CAMERA_kinect_openni::init(){
     _global_parameters.get_camera_character().readFromXMLFile(camera_file_path);
     _camera_spinner.reset(new ros::AsyncSpinner(1));
     _camera_spinner->start();
-}
-
-void BAXTER::init(){
-    std::string baxter_arm = std::string(_global_parameters.get_parameters()["baxter_arm"]);
-    if(strcmp(baxter_arm.c_str(), "left") == 0)
-        _eef_state_sub.reset(new ros::Subscriber(_baxter_nh.subscribe("/robot/limb/left/endpoint_state", 10, &BAXTER::eef_Callback, this)));
-    else if(strcmp(baxter_arm.c_str(), "right") == 0)
-        _eef_state_sub.reset(new ros::Subscriber(_baxter_nh.subscribe("/robot/limb/right/endpoint_state", 10, &BAXTER::eef_Callback, this)));
-    _baxter_spinner.reset(new ros::AsyncSpinner(1));
-    _baxter_spinner->start();
-}
-
-void CRUSTCRAWLER::init(){
-    _eef_state_sub.reset(new ros::Subscriber(_crustcrawler_nh.subscribe("/crustcrawler/endpoint_state", 10, &CRUSTCRAWLER::eef_Callback, this)));
-    _crustcrawler_spinner.reset(new ros::AsyncSpinner(1));
-    _crustcrawler_spinner->start();
 }

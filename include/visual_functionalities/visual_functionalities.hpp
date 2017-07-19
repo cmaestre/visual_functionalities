@@ -5,7 +5,6 @@
 
 namespace visual_functionalities {
 Visual_values _global_parameters;
-class ROBOT;
 class CAMERA;
 class VISUAL_FUNCTIONALITIES;
 
@@ -68,58 +67,6 @@ public:
 };
 
 
-class ROBOT{
-public:
-    typedef std::shared_ptr<ROBOT> Ptr;
-    typedef const std::shared_ptr<ROBOT> ConstPtr;
-
-    ROBOT(){}
-
-    virtual void init() = 0;
-
-protected:
-    ros::NodeHandle _nh_robot;
-    std::unique_ptr<ros::AsyncSpinner> _robot_spinner;
-    std::shared_ptr<ros::Subscriber> _eef_state_sub;
-};
-
-class BAXTER : public ROBOT{
-public:
-    typedef std::shared_ptr<BAXTER> Ptr;
-    typedef const std::shared_ptr<BAXTER> ConstPtr;
-
-    BAXTER(){}
-
-    void init() override;
-
-    //call back that register baxter left end effector pose and rearrange the orientation in RPY
-    void eef_Callback(const baxter_core_msgs::EndpointState::ConstPtr& eef_feedback){
-        ROS_WARN_STREAM("locating eef stuff gave for position: " << eef_feedback->pose.position.x);
-    }
-private:
-    ros::NodeHandle _baxter_nh;
-    std::unique_ptr<ros::AsyncSpinner> _baxter_spinner;
-    std::shared_ptr<ros::Subscriber> _eef_state_sub;
-};
-
-class CRUSTCRAWLER : public ROBOT {
-public:
-    typedef std::shared_ptr<CRUSTCRAWLER> Ptr;
-    typedef const std::shared_ptr<CRUSTCRAWLER> ConstPtr;
-
-    CRUSTCRAWLER(){}
-    void init() override;
-
-    //call back that register baxter left end effector pose and rearrange the orientation in RPY
-    void eef_Callback(const crustcrawler_core_msgs::EndpointState::ConstPtr& eef_feedback){
-        ROS_WARN_STREAM("locating eef stuff gave for position: " << eef_feedback->pose.position.x);
-    }
-private:
-    ros::NodeHandle _crustcrawler_nh;
-    std::unique_ptr<ros::AsyncSpinner> _crustcrawler_spinner;
-    std::shared_ptr<ros::Subscriber> _eef_state_sub;
-};
-
 class VISUAL_FUNCTIONALITIES{
 public:
     typedef std::shared_ptr<VISUAL_FUNCTIONALITIES> Ptr;
@@ -134,6 +81,9 @@ public:
     bool get_object_position_cb(visual_functionalities::object_detection_by_qr_code::Request &req,
                                 visual_functionalities::object_detection_by_qr_code::Response &res);
 
+    void convert_vector_object_position_robot_frame(std::vector<std::vector<double>>& object_position_camera_frame_vector,
+                                                    std::vector<std::vector<double>>& object_position_robot_frame_vector);
+
     void show_image();
 
     Visual_values& get_global_parameters(){
@@ -143,7 +93,7 @@ private:
     ros::NodeHandle _nh_visual_functionalities;
     std::unique_ptr<ros::AsyncSpinner> _visual_functionalities_spinner;
     std::unique_ptr<ros::ServiceServer> _visual_functionalities_service;
-    ROBOT::Ptr _robot;
+    std::unique_ptr<ros::Publisher> _object_qr_position_pub;
     CAMERA::Ptr _camera;
 };
 

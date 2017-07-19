@@ -36,6 +36,13 @@ find_library(IMAGE_PROCESSING_LIBRARY NAMES image_processing)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -fPIC")
 
+## Generate messages in the 'msg' folder
+add_message_files(
+        FILES
+        object_qr_position.msg
+)
+
+## Generate services in the 'srv' folder
 add_service_files(
   FILES
   object_detection_by_qr_code.srv
@@ -44,6 +51,7 @@ add_service_files(
 generate_messages(
   DEPENDENCIES
   std_msgs
+  geometry_msgs
 )
 
 catkin_package(

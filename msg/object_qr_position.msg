@@ -1,0 +1,2 @@
+std_msgs/Int64 qr_id
+geometry_msgs/PointStamped object_qr_position

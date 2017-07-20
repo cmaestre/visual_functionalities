@@ -90,6 +90,10 @@ void VISUAL_FUNCTIONALITIES::show_image(){
 //                lib_recording_functions::convert_object_position_to_robot_base(_global_parameters,
 //                                                                               object_position_camera_frame,
 //                                                                               object_position_robot_frame);
+
+                //Eigen::Vector3d pose_camera_frame, pose_robot_frame;
+                //pose_camera_frame << pt_marker.x, pt_marker.y, pt_marker.z;
+                //lib_recording_functions::convert_object_position_to_robot_base(_global_parameters, pose_camera_frame, pose_robot_frame);
                 geometry_msgs::PointStamped object_position;
                 object_position.header.stamp = ros::Time::now();
                 object_position.point.x = pt_marker.x;
@@ -100,6 +104,8 @@ void VISUAL_FUNCTIONALITIES::show_image(){
                 object_qr_position_topic.qr_id.data = _global_parameters.get_markers()[i].id;
                 object_qr_position_topic.object_qr_position = object_position;
                 _object_qr_position_pub->publish(object_qr_position_topic);
+                _global_parameters.get_objects_positions_map().find(_global_parameters.get_markers()[i].id)->second = object_position;
+
             }
 //            else{
 //                ROS_WARN_STREAM("VISUAL_FUNCTIONALITIES: The marker position is nan: " << pt_marker.x << ", " << pt_marker.y << ", " << pt_marker.z);
@@ -124,7 +130,12 @@ bool VISUAL_FUNCTIONALITIES::get_object_position_cb(visual_functionalities::obje
     ROS_INFO("VISUAL_FUNCTIONALITIES: at get object position");
     for(auto& i: _global_parameters.get_objects_positions_map()){
         if(req.object_index == i.first){
-            res.model_state = {i.second.point.x, i.second.point.y, i.second.point.z};
+            Eigen::Vector3d position_camera_frame, position_robot_frame;
+            position_camera_frame << i.second.point.x, i.second.point.y, i.second.point.z;
+            lib_recording_functions::convert_object_position_to_robot_base(_global_parameters,
+                                                                           position_camera_frame,
+                                                                           position_robot_frame);
+            res.model_state = {position_robot_frame(0), position_robot_frame(1), position_robot_frame(2)};
             return true;
         }
     }

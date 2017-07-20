@@ -1,7 +1,4 @@
 marker_size: "0.04"
-robot: "baxter"
-baxter_arm: "left"
 camera: "kinect_freenect"
-number_of_points: "20"
 child_frame: "/camera_rgb_optical_frame"
-parent_frame: "/camera_link"
+parent_frame: "/base"

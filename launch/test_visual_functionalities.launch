@@ -1,5 +1,5 @@
 <launch> 
-  <arg name="camera_link_pose" default="1.45 0.0 0.56 -0.387 -0.021 0.922 0.019"/>
+  <arg name="camera_link_pose" default="0.222 0.052 0.9 -0.004 0.406 -0.002 0.914"/>
   <node name="statict_transform" pkg="tf" type="static_transform_publisher" args=" $(arg camera_link_pose) /world /camera_link 100"/> 
   
 

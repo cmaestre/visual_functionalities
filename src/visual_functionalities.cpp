@@ -52,12 +52,12 @@ void VISUAL_FUNCTIONALITIES::show_image(){
                                                               0.1);
         _global_parameters.get_marker_centers().resize(_global_parameters.get_markers().size());
 
-//        ROS_WARN_STREAM("VISUAL_FUNCTIONALITIES: I found markers, number of them is: " << _global_parameters.get_markers().size());
-//        if(!_global_parameters.get_markers().empty())
-//            ROS_WARN_STREAM("VISUAL_FUNCTIONALITIES: And their IDs are: ");
+        //        ROS_WARN_STREAM("VISUAL_FUNCTIONALITIES: I found markers, number of them is: " << _global_parameters.get_markers().size());
+        //        if(!_global_parameters.get_markers().empty())
+        //            ROS_WARN_STREAM("VISUAL_FUNCTIONALITIES: And their IDs are: ");
 
         for(size_t i = 0; i < _global_parameters.get_markers().size(); i++){
-//            ROS_WARN_STREAM("VISUAL_FUNCTIONALITIES: For marker number: " << i << " The ID is: " << _global_parameters.get_markers()[i].id);
+            //            ROS_WARN_STREAM("VISUAL_FUNCTIONALITIES: For marker number: " << i << " The ID is: " << _global_parameters.get_markers()[i].id);
             _global_parameters.get_markers()[i].draw(_global_parameters.get_raw_original_picture(), cv::Scalar(94.0, 206.0, 165.0, 0.0));
 
             _global_parameters.get_markers()[i].calculateExtrinsics(_global_parameters.get_marker_size(),
@@ -83,17 +83,6 @@ void VISUAL_FUNCTIONALITIES::show_image(){
             double x = _global_parameters.get_marker_centers()[i](0), y = _global_parameters.get_marker_centers()[i](1);
             pcl::PointXYZRGBA pt_marker = input_cloud->at(std::round(x) + std::round(y) * input_cloud->width);
             if(pt_marker.x == pt_marker.x && pt_marker.y == pt_marker.y && pt_marker.z == pt_marker.z){
-//                ROS_WARN_STREAM("VISUAL_FUNCTIONALITIES: The marker 3D position is: " << pt_marker.x << ", " << pt_marker.y << ", " << pt_marker.z);
-                //_global_parameters.get_markers_positions_camera_frame() << pt_marker.x, pt_marker.y, pt_marker.z , 1.0;
-//                Eigen::Vector3d object_position_camera_frame, object_position_robot_frame;
-//                object_position_camera_frame << pt_marker.x, pt_marker.y, pt_marker.z;
-//                lib_recording_functions::convert_object_position_to_robot_base(_global_parameters,
-//                                                                               object_position_camera_frame,
-//                                                                               object_position_robot_frame);
-
-                //Eigen::Vector3d pose_camera_frame, pose_robot_frame;
-                //pose_camera_frame << pt_marker.x, pt_marker.y, pt_marker.z;
-                //lib_recording_functions::convert_object_position_to_robot_base(_global_parameters, pose_camera_frame, pose_robot_frame);
                 geometry_msgs::PointStamped object_position;
                 object_position.header.stamp = ros::Time::now();
                 object_position.point.x = pt_marker.x;
@@ -107,13 +96,13 @@ void VISUAL_FUNCTIONALITIES::show_image(){
                 _global_parameters.get_objects_positions_map().find(_global_parameters.get_markers()[i].id)->second = object_position;
 
             }
-//            else{
-//                ROS_WARN_STREAM("VISUAL_FUNCTIONALITIES: The marker position is nan: " << pt_marker.x << ", " << pt_marker.y << ", " << pt_marker.z);
-//            }
+            //            else{
+            //                ROS_WARN_STREAM("VISUAL_FUNCTIONALITIES: The marker position is nan: " << pt_marker.x << ", " << pt_marker.y << ", " << pt_marker.z);
+            //            }
         }
     }
     catch(...){
-//        ROS_ERROR("Something went wrong !!!");
+        //        ROS_ERROR("Something went wrong !!!");
         return;
     }
 
@@ -127,16 +116,25 @@ void VISUAL_FUNCTIONALITIES::show_image(){
 
 bool VISUAL_FUNCTIONALITIES::get_object_position_cb(visual_functionalities::object_detection_by_qr_code::Request &req,
                                                     visual_functionalities::object_detection_by_qr_code::Response &res){
-    ROS_INFO("VISUAL_FUNCTIONALITIES: at get object position");
+    ROS_INFO("VISUAL_FUNCTIONALITIES: at get object position, marker size is: %d",  _global_parameters.get_markers().size());
+    bool marker_exist = false;
     for(auto& i: _global_parameters.get_objects_positions_map()){
         if(req.object_index == i.first){
-            Eigen::Vector3d position_camera_frame, position_robot_frame;
-            position_camera_frame << i.second.point.x, i.second.point.y, i.second.point.z;
-            lib_recording_functions::convert_object_position_to_robot_base(_global_parameters,
-                                                                           position_camera_frame,
-                                                                           position_robot_frame);
-            res.model_state = {position_robot_frame(0), position_robot_frame(1), position_robot_frame(2)};
-            return true;
+            for(size_t m = 0; m < _global_parameters.get_markers().size(); m++){
+                if(_global_parameters.get_markers()[m].id == req.object_index)
+                    marker_exist = true;
+            }
+            if(marker_exist){
+                Eigen::Vector3d position_camera_frame, position_robot_frame;
+                position_camera_frame << i.second.point.x, i.second.point.y, i.second.point.z;
+                lib_recording_functions::convert_object_position_to_robot_base(_global_parameters,
+                                                                               position_camera_frame,
+                                                                               position_robot_frame);
+                res.model_state = {position_robot_frame(0), position_robot_frame(1), position_robot_frame(2)};
+                return true;
+            }
+            else
+                return false;
         }
     }
     return false;
@@ -172,9 +170,9 @@ void CAMERA_kinect_freenect::init(){
                                                                   "/camera/depth_registered/sw_registered/camera_info",
                                                                   "/camera/depth_registered/sw_registered/image_rect",
                                                                   _nh_camera));
-//    _camera_topics_rgb_info_sub = _nh_camera.subscribe<sensor_msgs::CameraInfo>("/camera/rgb/camera_info", 1, &CAMERA_kinect_freenect::camera_topics_rgb_info_cb, this);
-//    _camera_topics_rgb_image_sub = _nh_camera.subscribe<sensor_msgs::Image>("/camera/rgb/image_color", 1, &CAMERA_kinect_freenect::camera_topics_rgb_image_cb, this);
-//    _camera_topics_depth_info_sub = _nh_camera.subscribe<sensor_msgs::CameraInfo>("/camera/depth_registered/sw_registered/camera_info", 1, &CAMERA_kinect_freenect::camera_topics_depth_info_cb, this);
+    //    _camera_topics_rgb_info_sub = _nh_camera.subscribe<sensor_msgs::CameraInfo>("/camera/rgb/camera_info", 1, &CAMERA_kinect_freenect::camera_topics_rgb_info_cb, this);
+    //    _camera_topics_rgb_image_sub = _nh_camera.subscribe<sensor_msgs::Image>("/camera/rgb/image_color", 1, &CAMERA_kinect_freenect::camera_topics_rgb_image_cb, this);
+    //    _camera_topics_depth_info_sub = _nh_camera.subscribe<sensor_msgs::CameraInfo>("/camera/depth_registered/sw_registered/camera_info", 1, &CAMERA_kinect_freenect::camera_topics_depth_info_cb, this);
     _camera_topics_sub = _nh_camera.subscribe<sensor_msgs::Image>("/camera/depth_registered/sw_registered/image_rect", 1, &CAMERA_kinect_freenect::camera_topics_start_publishing_cb, this);
     std::string camera_file_path;
     _nh_camera.getParam("/camera_file_path", camera_file_path);

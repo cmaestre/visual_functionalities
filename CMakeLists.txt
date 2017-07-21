@@ -40,12 +40,14 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -fPIC")
 add_message_files(
         FILES
         object_qr_position.msg
+        object_blob_position.msg
 )
 
 ## Generate services in the 'srv' folder
 add_service_files(
   FILES
   object_detection_by_qr_code.srv
+  object_detection_by_blobs.srv
 )
 
 generate_messages(

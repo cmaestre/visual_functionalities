@@ -3,6 +3,8 @@
 
 #include "lib_recording.hpp"
 
+using namespace cv;
+
 namespace visual_functionalities {
 Visual_values _global_parameters;
 class CAMERA;
@@ -91,13 +93,17 @@ public:
 
     void init();
 
-    bool get_object_position_cb(visual_functionalities::object_detection_by_qr_code::Request &req,
+    bool get_object_position_qr_cb(visual_functionalities::object_detection_by_qr_code::Request &req,
                                 visual_functionalities::object_detection_by_qr_code::Response &res);
+
+    bool get_object_position_blob_cb(visual_functionalities::object_detection_by_blobs::Request &req,
+                                visual_functionalities::object_detection_by_blobs::Response &res);
 
     void convert_vector_object_position_robot_frame(std::vector<std::vector<double>>& object_position_camera_frame_vector,
                                                     std::vector<std::vector<double>>& object_position_robot_frame_vector);
 
-    void show_image();
+    void show_image_qr();
+    void show_image_blob();
 
     Visual_values& get_global_parameters(){
         return _global_parameters;
@@ -106,7 +112,9 @@ private:
     ros::NodeHandle _nh_visual_functionalities;
     std::unique_ptr<ros::AsyncSpinner> _visual_functionalities_spinner;
     std::unique_ptr<ros::ServiceServer> _visual_functionalities_service;
-    std::unique_ptr<ros::Publisher> _object_qr_position_pub;
+    std::unique_ptr<ros::Publisher> _object_qr_position_pub, _object_blob_position_pub;
+    bool _first_successful_iteration;
+    Point2f _object_center;
     CAMERA::Ptr _camera;
 };
 

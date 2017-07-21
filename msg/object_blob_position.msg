@@ -1,0 +1,1 @@
+geometry_msgs/PointStamped blob_position

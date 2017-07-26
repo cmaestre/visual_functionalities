@@ -2,7 +2,7 @@
 
 
 int main(int argc, char** argv){
-    ros::init(argc, argv, "test_visual_functionalities");
+    ros::init(argc, argv, "run_visual_functionalities");
     ros::NodeHandle n;
 
     XmlRpc::XmlRpcValue parameters;

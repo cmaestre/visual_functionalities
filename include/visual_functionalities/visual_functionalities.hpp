@@ -93,11 +93,11 @@ public:
 
     void init();
 
-    bool get_object_position_qr_cb(visual_functionalities::object_detection_by_qr_code::Request &req,
-                                visual_functionalities::object_detection_by_qr_code::Response &res);
+    bool get_object_position_qr_cb(visual_functionalities::GetObjectStateQr::Request &req,
+                                visual_functionalities::GetObjectStateQr::Response &res);
 
-    bool get_object_position_blob_cb(visual_functionalities::object_detection_by_blobs::Request &req,
-                                visual_functionalities::object_detection_by_blobs::Response &res);
+    bool get_object_position_blob_cb(visual_functionalities::GetObjectStateBlob::Request &req,
+                                visual_functionalities::GetObjectStateBlob::Response &res);
 
     void convert_vector_object_position_robot_frame(std::vector<std::vector<double>>& object_position_camera_frame_vector,
                                                     std::vector<std::vector<double>>& object_position_robot_frame_vector);

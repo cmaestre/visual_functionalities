@@ -38,16 +38,16 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -fPIC")
 
 ## Generate messages in the 'msg' folder
 add_message_files(
-        FILES
-        object_qr_position.msg
-        object_blob_position.msg
+  FILES
+  object_qr_position.msg
+  object_blob_position.msg
 )
 
 ## Generate services in the 'srv' folder
 add_service_files(
   FILES
-  object_detection_by_qr_code.srv
-  object_detection_by_blobs.srv
+  GetObjectStateQr.srv
+  GetObjectStateBlob.srv
 )
 
 generate_messages(
@@ -87,10 +87,7 @@ install(TARGETS visual_functionalities
 install(DIRECTORY include/
         DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
 
-
-
-
-## Test files
-add_executable(test_visual_functionalities src/test_visual_functionalities.cpp)
-target_link_libraries(test_visual_functionalities /usr/local/lib/libaruco.so  ${catkin_LIBRARIES} visual_functionalities)
+## Executable files
+add_executable(run_visual_functionalities src/run_visual_functionalities.cpp)
+target_link_libraries(run_visual_functionalities /usr/local/lib/libaruco.so  ${catkin_LIBRARIES} visual_functionalities)
 

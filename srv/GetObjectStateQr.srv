@@ -1,3 +1,3 @@
 int64 object_index
 ---
-float64[] model_state
+float64[] object_state

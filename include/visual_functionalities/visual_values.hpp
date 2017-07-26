@@ -48,10 +48,10 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include <visual_functionalities/object_detection_by_qr_code.h>
+#include <visual_functionalities/GetObjectStateQr.h>
 #include <visual_functionalities/object_qr_position.h>
 #include <visual_functionalities/object_blob_position.h>
-#include <visual_functionalities/object_detection_by_blobs.h>
+#include <visual_functionalities/GetObjectStateBlob.h>
 
 using namespace cv;
 

@@ -5,24 +5,25 @@ using namespace cv;
 
 void VISUAL_FUNCTIONALITIES::init(){
     ROS_INFO("VISUAL_FUNCTIONALITIES: initializing ......");
+    _nh_visual_functionalities.getParam("/visual_functionalities_parameters", _global_parameters.get_parameters());
     std::string camera_name = std::string(_global_parameters.get_parameters()["camera"]);
     std::string detection_method = std::string(_global_parameters.get_parameters()["detection_method"]);
 
     if(strcmp(detection_method.c_str(), "qr_code") == 0){
         _visual_functionalities_service.reset(new ros::ServiceServer(
-                                                  _nh_visual_functionalities.advertiseService("object_detection_by_qr_code",
+                                                  _nh_visual_functionalities.advertiseService("visual/get_object_state_qr",
                                                                                               &VISUAL_FUNCTIONALITIES::get_object_position_qr_cb,
                                                                                               this)));
         _object_qr_position_pub.reset(new ros::Publisher(
-                                          _nh_visual_functionalities.advertise<visual_functionalities::object_qr_position>("object_qr_position", true)));
+                                          _nh_visual_functionalities.advertise<visual_functionalities::object_qr_position>("visual/object_position_qr", true)));
     }
     else if(strcmp(detection_method.c_str(), "blobs") == 0){
         _visual_functionalities_service.reset(new ros::ServiceServer(
-                                                  _nh_visual_functionalities.advertiseService("object_detection_by_blobs",
+                                                  _nh_visual_functionalities.advertiseService("visual/get_object_state_blob",
                                                                                               &VISUAL_FUNCTIONALITIES::get_object_position_blob_cb,
                                                                                               this)));
         _object_blob_position_pub.reset(new ros::Publisher(
-                                            _nh_visual_functionalities.advertise<visual_functionalities::object_qr_position>("object_blob_position", true)));
+                                            _nh_visual_functionalities.advertise<visual_functionalities::object_blob_position>("visual/object_position_blob", true)));
         _global_parameters.set_h_lower(std::stof(_global_parameters.get_parameters()["h_lower"]));
         _global_parameters.set_s_lower(std::stof(_global_parameters.get_parameters()["s_lower"]));
         _global_parameters.set_v_lower(std::stof(_global_parameters.get_parameters()["v_lower"]));
@@ -34,7 +35,7 @@ void VISUAL_FUNCTIONALITIES::init(){
         _first_successful_iteration = false;
     }
 
-    _nh_visual_functionalities.getParam("/visual_functionalities_parameters", _global_parameters.get_parameters());
+
     _global_parameters.set_marker_size(std::stof(_global_parameters.get_parameters()["marker_size"]));
     _global_parameters.set_child_frame(std::string(_global_parameters.get_parameters()["child_frame"]));
     _global_parameters.set_parent_frame(std::string(_global_parameters.get_parameters()["parent_frame"]));
@@ -261,8 +262,8 @@ void VISUAL_FUNCTIONALITIES::show_image_blob(){
 
 }
 
-bool VISUAL_FUNCTIONALITIES::get_object_position_qr_cb(visual_functionalities::object_detection_by_qr_code::Request &req,
-                                                       visual_functionalities::object_detection_by_qr_code::Response &res){
+bool VISUAL_FUNCTIONALITIES::get_object_position_qr_cb(visual_functionalities::GetObjectStateQr::Request &req,
+                                                       visual_functionalities::GetObjectStateQr::Response &res){
     ROS_INFO_STREAM("VISUAL_FUNCTIONALITIES: at get object position, marker size is: " <<  _global_parameters.get_markers().size());
     bool marker_exist = false;
     for(auto& i: _global_parameters.get_qrs_positions_map()){
@@ -287,20 +288,20 @@ bool VISUAL_FUNCTIONALITIES::get_object_position_qr_cb(visual_functionalities::o
     return false;
 }
 
-bool VISUAL_FUNCTIONALITIES::get_object_position_blob_cb(visual_functionalities::object_detection_by_blobs::Request &req,
-                                                         visual_functionalities::object_detection_by_blobs::Response &res){
+bool VISUAL_FUNCTIONALITIES::get_object_position_blob_cb(visual_functionalities::GetObjectStateBlob::Request &req,
+                                                         visual_functionalities::GetObjectStateBlob::Response &res){
     ROS_INFO("VISUAL_FUNCTIONALITIES: Trying to give blob position");
-    if(_global_parameters.get_able_to_locate_blob()){
+    //if(_global_parameters.get_able_to_locate_blob()){
         Eigen::Vector3d position_camera_frame, position_robot_frame;
         position_camera_frame << _global_parameters.get_blob_position()[0], _global_parameters.get_blob_position()[1], _global_parameters.get_blob_position()[2];
         lib_recording_functions::convert_object_position_to_robot_base(_global_parameters,
                                                                        position_camera_frame,
                                                                        position_robot_frame);
-        res.model_state = {position_robot_frame(0), position_robot_frame(1), position_robot_frame(2)};
+        res.model_state = {position_robot_frame(0)+0.025, position_robot_frame(1), position_robot_frame(2)};
         return true;
-    }
-    else
-        return false;
+    //}
+    //else
+        //return false;
 }
 
 void VISUAL_FUNCTIONALITIES::convert_vector_object_position_robot_frame(

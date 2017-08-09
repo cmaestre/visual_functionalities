@@ -278,7 +278,7 @@ bool VISUAL_FUNCTIONALITIES::get_object_position_qr_cb(visual_functionalities::G
                 lib_recording_functions::convert_object_position_to_robot_base(_global_parameters,
                                                                                position_camera_frame,
                                                                                position_robot_frame);
-                res.model_state = {position_robot_frame(0), position_robot_frame(1), position_robot_frame(2)};
+                res.object_state = {position_robot_frame(0), position_robot_frame(1), position_robot_frame(2)};
                 return true;
             }
             else
